@@ -7,9 +7,12 @@ from aiogram.types import Message, CallbackQuery
 
 from bot.db import crud
 from bot.db.session import AsyncSessionLocal
-from bot.keyboards.workout import location_kb, skip_action_kb, finish_workout_kb
+from bot.keyboards.workout import (
+    location_kb, skip_action_kb, finish_workout_kb, apply_adjustments_kb,
+)
 from bot.services import exercise_service
 from bot.services.workout_service import ensure_planned_workout, handle_skip
+from bot.services.analysis_service import analyze_workout_performance, format_analysis_message
 from bot.constants import CB_LOCATION, CB_SKIP_ACTION, CB_DONE_CONFIRM, SKIP_ASK, STATUS_DONE
 
 router = Router()
@@ -23,7 +26,6 @@ async def cmd_workout(message: Message, state: FSMContext) -> None:
         if not s or not s.onboarding_done:
             await message.answer("Сначала пройди настройку — отправь /start.")
             return
-
         workout = await ensure_planned_workout(session, message.from_user.id, today)
         await session.commit()
 
@@ -51,6 +53,7 @@ async def cb_location(callback: CallbackQuery, state: FSMContext) -> None:
 
     async with AsyncSessionLocal() as session:
         s = await crud.get_user_settings(session, callback.from_user.id)
+        user_targets = await crud.get_user_targets(session, callback.from_user.id)
         await crud.update_workout_status(
             session, workout_id, "planned",
             location=location,
@@ -62,7 +65,7 @@ async def cb_location(callback: CallbackQuery, state: FSMContext) -> None:
         has_bench = s.has_bench
 
     exercises = exercise_service.get_exercises_for_workout(
-        plan_day, location, home_eq, street_eq, has_bench
+        plan_day, location, home_eq, street_eq, has_bench, user_targets
     )
 
     if not exercises:
@@ -70,6 +73,7 @@ async def cb_location(callback: CallbackQuery, state: FSMContext) -> None:
             "Нет подходящих упражнений для этой локации и оборудования. "
             "Проверь настройки /settings."
         )
+        await callback.answer()
         return
 
     await state.update_data(
@@ -104,16 +108,12 @@ async def _prompt_next_set(
     ex_index: int,
     set_num: int,
 ) -> None:
-    from bot.keyboards.workout import set_logged_kb
-
     data = await state.get_data()
     if exercises is None:
-        # reload from state
         ex_keys = data["exercises"]
         exercises = [exercise_service.get_exercise(k) for k in ex_keys]
 
     if ex_index >= len(exercises):
-        # All exercises done
         workout_id = data["workout_id"]
         await message.answer(
             "Все упражнения выполнены! Нажми кнопку ниже, чтобы завершить тренировку. 🏁",
@@ -126,7 +126,7 @@ async def _prompt_next_set(
     unit = ex.get("unit", "reps")
 
     if unit == "time":
-        prompt = f"⏱ {ex['name']}: подход {set_num}/{total_sets} — {ex['default_reps']} сек\nВведи фактическое время (сек):"
+        prompt = f"⏱ {ex['name']}: подход {set_num}/{total_sets} — цель {ex['default_reps']} сек\nВведи фактическое время (сек):"
     else:
         prompt = f"💪 {ex['name']}: подход {set_num}/{total_sets} — цель {ex['default_reps']} повт.\nВведи количество повторений:"
 
@@ -149,7 +149,6 @@ async def handle_set_result(message: Message, state: FSMContext) -> None:
     ex_keys = data["exercises"]
     exercises = [exercise_service.get_exercise(k) for k in ex_keys]
     ex = exercises[ex_index]
-
     unit = ex.get("unit", "reps")
 
     async with AsyncSessionLocal() as session:
@@ -165,12 +164,11 @@ async def handle_set_result(message: Message, state: FSMContext) -> None:
 
     total_sets = ex["default_sets"]
     if set_num < total_sets:
-        await message.answer(f"✅ Записано! Следующий подход...")
+        await message.answer("✅ Записано! Следующий подход...")
         await _prompt_next_set(message, state, exercises, ex_index, set_num + 1)
     else:
-        next_index = ex_index + 1
         await message.answer(f"✅ {ex['name']} — завершено!")
-        await _prompt_next_set(message, state, exercises, next_index, 1)
+        await _prompt_next_set(message, state, exercises, ex_index + 1, 1)
 
 
 @router.callback_query(F.data.startswith(CB_DONE_CONFIRM + ":"))
@@ -179,18 +177,79 @@ async def cb_done_confirm(callback: CallbackQuery, state: FSMContext) -> None:
 
     async with AsyncSessionLocal() as session:
         await crud.update_workout_status(
-            session,
-            workout_id,
-            STATUS_DONE,
+            session, workout_id, STATUS_DONE,
             actual_date=date.today(),
             finished_at=datetime.now(),
         )
+        sets = await crud.get_workout_sets(session, workout_id)
+        user_targets = await crud.get_user_targets(session, callback.from_user.id)
         await session.commit()
 
     await state.clear()
+    await callback.message.edit_text("Тренировка завершена! Отличная работа 💪")
+    await callback.answer()
+
+    if not sets:
+        return
+
+    results = analyze_workout_performance(sets, user_targets)
+    has_changes = any(r["direction"] != "same" for r in results)
+    analysis_text = format_analysis_message(results)
+
+    if has_changes:
+        await callback.message.answer(
+            analysis_text,
+            reply_markup=apply_adjustments_kb(workout_id),
+            parse_mode="HTML",
+        )
+    else:
+        await callback.message.answer(analysis_text, parse_mode="HTML")
+
+
+@router.callback_query(F.data.startswith("apply_targets:"))
+async def cb_apply_targets(callback: CallbackQuery) -> None:
+    parts = callback.data.split(":")
+    workout_id = int(parts[1])
+    apply = parts[2] == "yes"
+
+    if not apply:
+        await callback.message.edit_text(
+            callback.message.text + "\n\n<i>Цели оставлены без изменений.</i>",
+            parse_mode="HTML",
+        )
+        await callback.answer()
+        return
+
+    async with AsyncSessionLocal() as session:
+        sets = await crud.get_workout_sets(session, workout_id)
+        user_targets = await crud.get_user_targets(session, callback.from_user.id)
+
+        results = analyze_workout_performance(sets, user_targets)
+
+        saved = 0
+        for r in results:
+            if r["direction"] == "same":
+                continue
+            if r["unit"] == "time":
+                await crud.upsert_exercise_target(
+                    session, callback.from_user.id, r["exercise_key"],
+                    target_sets=r["current_sets"],
+                    target_duration_sec=r["suggested"],
+                )
+            else:
+                await crud.upsert_exercise_target(
+                    session, callback.from_user.id, r["exercise_key"],
+                    target_sets=r["current_sets"],
+                    target_reps=r["suggested"],
+                )
+            saved += 1
+
+        await session.commit()
+
     await callback.message.edit_text(
-        "Тренировка завершена! Отличная работа 💪\n\n"
-        "Посмотри свою статистику: /stats"
+        callback.message.text + f"\n\n✅ <b>Сохранено {saved} корректировок.</b> "
+        "Новые цели будут применены со следующей тренировки.",
+        parse_mode="HTML",
     )
     await callback.answer()
 
@@ -231,14 +290,14 @@ async def cb_skip_action(callback: CallbackQuery, state: FSMContext) -> None:
 
     if action == "now":
         await state.clear()
-        await callback.message.edit_text("Отлично! Давай тренироваться. Где тренируешься?",
-                                         reply_markup=location_kb())
-        await state.update_data(workout_id=workout_id)
-        # need plan_day
         async with AsyncSessionLocal() as session:
             w = await crud.get_workout_by_id(session, workout_id)
         if w:
             await state.update_data(plan_day=w.plan_day, workout_id=w.id)
+        await callback.message.edit_text(
+            "Отлично! Давай тренироваться. Где тренируешься?",
+            reply_markup=location_kb(),
+        )
         await callback.answer()
         return
 

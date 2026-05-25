@@ -20,6 +20,7 @@ def get_exercises_for_workout(
     home_equipment: list[str],
     street_equipment: list[str],
     has_bench: bool,
+    user_targets: dict | None = None,
 ) -> list[dict]:
     """Return exercises suitable for the given plan day, location and user equipment."""
     catalog = _load()
@@ -49,7 +50,16 @@ def get_exercises_for_workout(
         if not required.issubset(available_equipment | {"bench"} if has_bench else available_equipment):
             continue
 
-        result.append({"key": key, **ex})
+        entry = {"key": key, **ex}
+        # Apply personalized targets if available
+        if user_targets and key in user_targets:
+            t = user_targets[key]
+            entry["default_sets"] = t.target_sets
+            if t.target_reps is not None:
+                entry["default_reps"] = t.target_reps
+            if t.target_duration_sec is not None:
+                entry["default_reps"] = t.target_duration_sec
+        result.append(entry)
 
     return result
 

@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from bot.constants import CB_LOCATION, CB_SKIP_ACTION, CB_DONE_CONFIRM
+from bot.constants import CB_LOCATION, CB_SKIP_ACTION, CB_DONE_CONFIRM, CB_CONFIRM
 
 
 def location_kb() -> InlineKeyboardMarkup:
@@ -31,6 +31,14 @@ def set_logged_kb(exercise_key: str, set_num: int, total_sets: int) -> InlineKey
         )
     builder.button(text="✅ Завершить упражнение", callback_data=f"done_exercise:{exercise_key}")
     builder.adjust(1)
+    return builder.as_markup()
+
+
+def apply_adjustments_kb(workout_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="✅ Применить", callback_data=f"apply_targets:{workout_id}:yes")
+    builder.button(text="⏭ Пропустить", callback_data=f"apply_targets:{workout_id}:no")
+    builder.adjust(2)
     return builder.as_markup()
 
 

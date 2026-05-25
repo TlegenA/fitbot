@@ -32,6 +32,9 @@ class User(Base):
     workouts: Mapped[List["Workout"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+    exercise_targets: Mapped[List["UserExerciseTarget"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class UserSettings(Base):
@@ -85,6 +88,24 @@ class Workout(Base):
     sets: Mapped[List["ExerciseSet"]] = relationship(
         back_populates="workout", cascade="all, delete-orphan"
     )
+
+
+class UserExerciseTarget(Base):
+    __tablename__ = "user_exercise_targets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE")
+    )
+    exercise_key: Mapped[str] = mapped_column(String(64))
+    target_sets: Mapped[int] = mapped_column(Integer)
+    target_reps: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    target_duration_sec: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
+
+    user: Mapped["User"] = relationship(back_populates="exercise_targets")
 
 
 class ExerciseSet(Base):

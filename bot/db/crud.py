@@ -5,7 +5,7 @@ from sqlalchemy import select, update, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from bot.db.models import User, UserSettings, WorkoutSchedule, Workout, ExerciseSet
+from bot.db.models import User, UserSettings, WorkoutSchedule, Workout, ExerciseSet, UserExerciseTarget
 
 
 # ---------- Users ----------
@@ -200,6 +200,51 @@ async def get_all_workouts(
         .order_by(Workout.scheduled_date)
     )
     return list(result.scalars())
+
+
+# ---------- Sets ----------
+
+# ---------- Exercise Targets ----------
+
+async def get_user_targets(
+    session: AsyncSession, user_id: int
+) -> dict[str, "UserExerciseTarget"]:
+    result = await session.execute(
+        select(UserExerciseTarget).where(UserExerciseTarget.user_id == user_id)
+    )
+    return {row.exercise_key: row for row in result.scalars()}
+
+
+async def upsert_exercise_target(
+    session: AsyncSession,
+    user_id: int,
+    exercise_key: str,
+    target_sets: int,
+    target_reps: int | None = None,
+    target_duration_sec: int | None = None,
+) -> UserExerciseTarget:
+    result = await session.execute(
+        select(UserExerciseTarget).where(
+            UserExerciseTarget.user_id == user_id,
+            UserExerciseTarget.exercise_key == exercise_key,
+        )
+    )
+    row = result.scalar_one_or_none()
+    if row is None:
+        row = UserExerciseTarget(
+            user_id=user_id,
+            exercise_key=exercise_key,
+            target_sets=target_sets,
+            target_reps=target_reps,
+            target_duration_sec=target_duration_sec,
+        )
+        session.add(row)
+    else:
+        row.target_sets = target_sets
+        row.target_reps = target_reps
+        row.target_duration_sec = target_duration_sec
+    await session.flush()
+    return row
 
 
 # ---------- Sets ----------
