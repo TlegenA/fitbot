@@ -124,12 +124,12 @@ async def _reminder_dispatcher(bot: Bot) -> None:
     """Called every hour — passes the current Moscow hour to the reminder sender."""
     from datetime import datetime
     import zoneinfo
-    moscow_hour = datetime.now(tz=zoneinfo.ZoneInfo("Europe/Moscow")).hour
+    moscow_hour = datetime.now(tz=zoneinfo.ZoneInfo("Asia/Almaty")).hour
     await send_workout_reminders(bot, moscow_hour)
 
 
 def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
-    scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
+    scheduler = AsyncIOScheduler(timezone="Asia/Almaty")
 
     # Weekly AI analysis — Sunday at 20:00 Moscow
     scheduler.add_job(
