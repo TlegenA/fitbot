@@ -20,11 +20,23 @@ logger = logging.getLogger(__name__)
 
 
 async def on_startup(bot: Bot) -> None:
+    from sqlalchemy import text
     from bot.db.session import engine
     from bot.db.models import Base
+
     async with engine.begin() as conn:
+        # Create new tables (no-op for existing ones)
         await conn.run_sync(Base.metadata.create_all)
-    logger.info("Database tables ensured.")
+
+        # Safe column migrations — ADD COLUMN IF NOT EXISTS is idempotent
+        column_migrations = [
+            "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS reminder_enabled BOOLEAN NOT NULL DEFAULT TRUE",
+            "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS reminder_hour INTEGER NOT NULL DEFAULT 9",
+        ]
+        for sql in column_migrations:
+            await conn.execute(text(sql))
+
+    logger.info("Database schema up to date.")
 
 
 async def on_shutdown(bot: Bot, scheduler) -> None:
