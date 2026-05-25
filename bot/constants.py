@@ -28,7 +28,7 @@ SCHEDULE_4_DAYS = [0, 1, 3, 4]     # Mon, Tue, Thu, Fri
 # Plan day rotation for each schedule
 SCHEDULE_2_PLAN = ["A", "B"]
 SCHEDULE_3_PLAN = ["A", "B", "C"]
-SCHEDULE_4_PLAN = ["A", "B", "C", "A"]
+SCHEDULE_4_PLAN = ["A", "B", "C", "D"]
 
 # Home equipment options
 HOME_EQUIPMENT_OPTIONS = [

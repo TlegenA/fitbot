@@ -66,5 +66,9 @@ def format_exercise_line(ex: dict) -> str:
     unit = ex.get("unit", "reps")
     sets = ex["default_sets"]
     if unit == "time":
-        return f"• {ex['name']} — {sets}×{ex['default_reps']} сек"
-    return f"• {ex['name']} — {sets}×{ex['default_reps']}"
+        line = f"• {ex['name']} — {sets}×{ex['default_reps']} сек"
+    else:
+        line = f"• {ex['name']} — {sets}×{ex['default_reps']}"
+    if ex.get("note"):
+        line += f"\n  ℹ️ {ex['note']}"
+    return line

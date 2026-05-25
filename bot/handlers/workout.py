@@ -52,7 +52,7 @@ async def cb_location(callback: CallbackQuery, state: FSMContext) -> None:
     async with AsyncSessionLocal() as session:
         s = await crud.get_user_settings(session, callback.from_user.id)
         await crud.update_workout_status(
-            session, workout_id, "active",
+            session, workout_id, "planned",
             location=location,
             started_at=datetime.now(),
         )
@@ -80,6 +80,14 @@ async def cb_location(callback: CallbackQuery, state: FSMContext) -> None:
     )
 
     lines = [f"Тренировка {plan_day} — {'дома 🏠' if location == 'home' else 'на улице 🌳'}\n"]
+
+    if plan_day == "D":
+        lines.append(
+            "⚕️ Реабилитационная тренировка ног\n"
+            "Все упражнения подобраны с учётом хондромаляции надколенника "
+            "и синовита. Останавливайся при появлении боли или отёка.\n"
+        )
+
     for ex in exercises:
         lines.append(exercise_service.format_exercise_line(ex))
     lines.append("\nНачнём! Введи результат первого подхода.")

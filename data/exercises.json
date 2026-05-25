@@ -1,6 +1,4 @@
 {
-  "_comment": "plan_days: A=грудь/плечи/трицепс, B=спина/бицепс, C=руки+кор, legs=ноги (отключены)",
-
   "push_up": {
     "name": "Отжимания",
     "muscles": ["chest", "triceps", "shoulders"],
@@ -102,7 +100,6 @@
     "default_reps": 10,
     "unit": "reps"
   },
-
   "pullup": {
     "name": "Подтягивания прямым хватом",
     "muscles": ["back", "biceps"],
@@ -203,7 +200,6 @@
     "default_reps": 10,
     "unit": "reps"
   },
-
   "overhead_tricep_extension": {
     "name": "Французский жим гантелей стоя",
     "muscles": ["triceps"],
@@ -225,7 +221,7 @@
     "unit": "reps"
   },
   "skull_crusher_floor": {
-    "name": "Жим узким хватом лёжа (скалолом)",
+    "name": "Жим узким хватом лёжа (трицепс)",
     "muscles": ["triceps"],
     "required_equipment": ["dumbbells"],
     "plan_days": ["C"],
@@ -394,95 +390,114 @@
     "default_reps": 30,
     "unit": "reps"
   },
-
-  "squat": {
-    "name": "Приседания",
-    "muscles": ["quads", "glutes"],
+  "straight_leg_raise": {
+    "name": "Прямой подъём ноги лёжа",
+    "muscles": ["quads", "hip_flexors"],
     "required_equipment": [],
-    "plan_days": ["legs"],
+    "plan_days": ["D"],
     "locations": ["home", "street"],
     "default_sets": 3,
     "default_reps": 15,
-    "unit": "reps"
-  },
-  "goblet_squat": {
-    "name": "Приседания с гирей (гоблет)",
-    "muscles": ["quads", "glutes", "core"],
-    "required_equipment": ["kettlebell"],
-    "plan_days": ["legs"],
-    "locations": ["home"],
-    "default_sets": 3,
-    "default_reps": 12,
-    "unit": "reps"
-  },
-  "dumbbell_squat": {
-    "name": "Приседания с гантелями",
-    "muscles": ["quads", "glutes"],
-    "required_equipment": ["dumbbells"],
-    "plan_days": ["legs"],
-    "locations": ["home"],
-    "default_sets": 3,
-    "default_reps": 12,
-    "unit": "reps"
-  },
-  "lunge": {
-    "name": "Выпады",
-    "muscles": ["quads", "glutes", "hamstrings"],
-    "required_equipment": [],
-    "plan_days": ["legs"],
-    "locations": ["home", "street"],
-    "default_sets": 3,
-    "default_reps": 10,
-    "unit": "reps"
-  },
-  "dumbbell_lunge": {
-    "name": "Выпады с гантелями",
-    "muscles": ["quads", "glutes", "hamstrings"],
-    "required_equipment": ["dumbbells"],
-    "plan_days": ["legs"],
-    "locations": ["home"],
-    "default_sets": 3,
-    "default_reps": 10,
-    "unit": "reps"
-  },
-  "romanian_deadlift": {
-    "name": "Румынская тяга с гантелями",
-    "muscles": ["hamstrings", "glutes", "back"],
-    "required_equipment": ["dumbbells"],
-    "plan_days": ["legs"],
-    "locations": ["home"],
-    "default_sets": 3,
-    "default_reps": 10,
-    "unit": "reps"
-  },
-  "kettlebell_swing": {
-    "name": "Махи гирей",
-    "muscles": ["glutes", "hamstrings", "back", "core"],
-    "required_equipment": ["kettlebell"],
-    "plan_days": ["legs"],
-    "locations": ["home"],
-    "default_sets": 3,
-    "default_reps": 15,
-    "unit": "reps"
+    "unit": "reps",
+    "note": "Колено прямое, нет давления на надколенник. Безопасно при хондромаляции."
   },
   "glute_bridge": {
     "name": "Ягодичный мостик",
     "muscles": ["glutes", "hamstrings"],
     "required_equipment": [],
-    "plan_days": ["legs"],
+    "plan_days": ["D"],
     "locations": ["home", "street"],
     "default_sets": 3,
     "default_reps": 15,
-    "unit": "reps"
+    "unit": "reps",
+    "note": "Сгиб колена ~90°, нагрузка на ягодицы и бицепс бедра. При болях уменьшить амплитуду."
   },
-  "calf_raise": {
-    "name": "Подъёмы на носки",
-    "muscles": ["calves"],
+  "single_leg_glute_bridge": {
+    "name": "Ягодичный мостик на одной ноге",
+    "muscles": ["glutes", "hamstrings", "core"],
     "required_equipment": [],
-    "plan_days": ["legs"],
+    "plan_days": ["D"],
+    "locations": ["home", "street"],
+    "default_sets": 3,
+    "default_reps": 10,
+    "unit": "reps",
+    "note": "Усиленный вариант мостика. Выполнять только при отсутствии боли."
+  },
+  "hip_abduction_lying": {
+    "name": "Отведение ноги лёжа на боку",
+    "muscles": ["glutes", "hip_abductors"],
+    "required_equipment": [],
+    "plan_days": ["D"],
+    "locations": ["home", "street"],
+    "default_sets": 3,
+    "default_reps": 15,
+    "unit": "reps",
+    "note": "Нулевая нагрузка на коленный сустав. Укрепляет среднюю ягодичную мышцу."
+  },
+  "hip_abduction_band": {
+    "name": "Отведение ноги стоя с резинкой",
+    "muscles": ["glutes", "hip_abductors"],
+    "required_equipment": ["resistance_bands"],
+    "plan_days": ["D"],
+    "locations": ["home"],
+    "default_sets": 3,
+    "default_reps": 15,
+    "unit": "reps",
+    "note": "Опорная нога слегка согнута. Не перегружать колено."
+  },
+  "clamshell": {
+    "name": "Раскрытие бёдер (моллюск)",
+    "muscles": ["glutes", "hip_abductors"],
+    "required_equipment": [],
+    "plan_days": ["D"],
     "locations": ["home", "street"],
     "default_sets": 3,
     "default_reps": 20,
-    "unit": "reps"
+    "unit": "reps",
+    "note": "Лёжа на боку, колени согнуты ~45°. Безопасно при синовите."
+  },
+  "prone_hip_extension": {
+    "name": "Разгибание бедра лёжа на животе",
+    "muscles": ["glutes", "hamstrings"],
+    "required_equipment": [],
+    "plan_days": ["D"],
+    "locations": ["home", "street"],
+    "default_sets": 3,
+    "default_reps": 15,
+    "unit": "reps",
+    "note": "Нога прямая. Нет компрессии коленного сустава."
+  },
+  "seated_calf_raise": {
+    "name": "Подъёмы на носки сидя",
+    "muscles": ["calves"],
+    "required_equipment": [],
+    "plan_days": ["D"],
+    "locations": ["home", "street"],
+    "default_sets": 3,
+    "default_reps": 20,
+    "unit": "reps",
+    "note": "Сидя на стуле. Минимальная нагрузка на колено."
+  },
+  "terminal_knee_extension_band": {
+    "name": "Разгибание колена с резинкой (0–30°)",
+    "muscles": ["quads", "vmo"],
+    "required_equipment": ["resistance_bands"],
+    "plan_days": ["D"],
+    "locations": ["home"],
+    "default_sets": 3,
+    "default_reps": 15,
+    "unit": "reps",
+    "note": "Только последние 30° разгибания. Активирует ВМО без давления на надколенник."
+  },
+  "dead_bug": {
+    "name": "Мёртвый жук (стабилизация кора)",
+    "muscles": ["core", "abs"],
+    "required_equipment": [],
+    "plan_days": ["D"],
+    "locations": ["home", "street"],
+    "default_sets": 3,
+    "default_reps": 10,
+    "unit": "reps",
+    "note": "Лёжа на спине. Нет нагрузки на колени."
   }
 }
