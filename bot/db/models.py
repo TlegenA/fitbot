@@ -48,6 +48,8 @@ class UserSettings(Base):
     street_equipment: Mapped[List[str]] = mapped_column(ARRAY(Text), default=list)
     has_bench: Mapped[bool] = mapped_column(Boolean, default=False)
     skip_behavior: Mapped[str] = mapped_column(String(16), default="ask")
+    reminder_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    reminder_hour: Mapped[int] = mapped_column(Integer, default=9)
     onboarding_done: Mapped[bool] = mapped_column(Boolean, default=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()

@@ -10,9 +10,62 @@ from bot.db.session import AsyncSessionLocal
 from bot.db.models import User, UserSettings
 from bot.db import crud
 from bot.services.claude_service import get_weekly_analysis
-from bot.constants import WEEKLY_ANALYSIS_HOUR, WEEKLY_ANALYSIS_MINUTE, WEEKLY_ANALYSIS_DAY
+from bot.constants import (
+    WEEKLY_ANALYSIS_HOUR, WEEKLY_ANALYSIS_MINUTE, WEEKLY_ANALYSIS_DAY,
+    DAY_NAMES_FULL_RU,
+)
 
 logger = logging.getLogger(__name__)
+
+
+async def send_workout_reminders(bot: Bot, current_hour: int) -> None:
+    """Send training-day reminders to users whose reminder_hour matches current_hour."""
+    today = date.today()
+    dow = today.weekday()
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(User).join(UserSettings).where(
+                UserSettings.onboarding_done == True,
+                UserSettings.reminder_enabled == True,
+                UserSettings.reminder_hour == current_hour,
+                User.is_active == True,
+            )
+        )
+        users = list(result.scalars())
+
+    for user in users:
+        try:
+            async with AsyncSessionLocal() as session:
+                schedule = await crud.get_schedule(session, user.id)
+                plan_day = next(
+                    (e.plan_day for e in schedule if e.day_of_week == dow), None
+                )
+                if not plan_day:
+                    continue
+
+                # Don't remind if workout already done or skipped today
+                workout = await crud.get_today_workout(session, user.id, today)
+                if workout and workout.status in ("done", "skipped"):
+                    continue
+
+            day_name = DAY_NAMES_FULL_RU[dow]
+            plan_labels = {
+                "A": "A — грудь, плечи, трицепс 💪",
+                "B": "B — спина, бицепс 🏋️",
+                "C": "C — руки и кор 💪",
+                "D": "D — реабилитация ног 🦵",
+            }
+            plan_text = plan_labels.get(plan_day, f"тренировка {plan_day}")
+
+            await bot.send_message(
+                user.id,
+                f"⏰ Привет! Сегодня {day_name} — день тренировки.\n\n"
+                f"📋 {plan_text}\n\n"
+                "Отправь /workout чтобы начать. Удачи! 💪",
+            )
+        except Exception as e:
+            logger.error(f"Reminder error for user {user.id}: {e}")
 
 
 async def send_weekly_analysis(bot: Bot) -> None:
@@ -67,8 +120,18 @@ async def send_weekly_analysis(bot: Bot) -> None:
             logger.error(f"Weekly analysis error for user {user.id}: {e}")
 
 
+async def _reminder_dispatcher(bot: Bot) -> None:
+    """Called every hour — passes the current Moscow hour to the reminder sender."""
+    from datetime import datetime
+    import zoneinfo
+    moscow_hour = datetime.now(tz=zoneinfo.ZoneInfo("Europe/Moscow")).hour
+    await send_workout_reminders(bot, moscow_hour)
+
+
 def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
+
+    # Weekly AI analysis — Sunday at 20:00 Moscow
     scheduler.add_job(
         send_weekly_analysis,
         trigger="cron",
@@ -77,4 +140,13 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
         minute=WEEKLY_ANALYSIS_MINUTE,
         kwargs={"bot": bot},
     )
+
+    # Daily workout reminders — run every hour, filter by user's reminder_hour
+    scheduler.add_job(
+        _reminder_dispatcher,
+        trigger="cron",
+        minute=0,
+        kwargs={"bot": bot},
+    )
+
     return scheduler

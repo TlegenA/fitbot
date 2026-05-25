@@ -26,16 +26,33 @@ class SettingsStates(StatesGroup):
     edit_has_bench = State()
     edit_street_equip = State()
     edit_skip_pref = State()
+    edit_reminder = State()
 
 
-def settings_menu_kb() -> any:
+def settings_menu_kb(reminder_enabled: bool = True) -> any:
     builder = InlineKeyboardBuilder()
     builder.button(text="📅 Дней в неделю", callback_data="settings:days")
     builder.button(text="🏠 Оборудование дома", callback_data="settings:home_equip")
     builder.button(text="🌳 Оборудование на улице", callback_data="settings:street_equip")
     builder.button(text="⏭ При пропуске", callback_data="settings:skip_pref")
+    reminder_icon = "🔔" if reminder_enabled else "🔕"
+    builder.button(text=f"{reminder_icon} Напоминание", callback_data="settings:reminder")
     builder.button(text="❌ Закрыть", callback_data="settings:close")
     builder.adjust(1)
+    return builder.as_markup()
+
+
+def reminder_kb(current_hour: int, enabled: bool) -> any:
+    builder = InlineKeyboardBuilder()
+    toggle_text = "🔕 Выключить" if enabled else "🔔 Включить"
+    builder.button(text=toggle_text, callback_data="reminder:toggle")
+    if enabled:
+        for h in (7, 8, 9, 10, 11, 12, 18, 19, 20):
+            mark = "✅ " if h == current_hour else ""
+            builder.button(text=f"{mark}{h:02d}:00", callback_data=f"reminder:hour:{h}")
+        builder.adjust(1, 3, 3, 3)
+    else:
+        builder.adjust(1)
     return builder.as_markup()
 
 
@@ -49,16 +66,18 @@ async def cmd_settings(message: Message, state: FSMContext) -> None:
         return
 
     pref_text = {"shift": "Переносить", "skip": "Пропускать", "ask": "Спрашивать"}.get(s.skip_behavior, "?")
+    reminder_text = f"{s.reminder_hour:02d}:00" if s.reminder_enabled else "выключено"
     text = (
         "⚙️ Настройки\n\n"
         f"📅 Тренировок в неделю: {s.days_per_week}\n"
         f"🏠 Оборудование дома: {', '.join(s.home_equipment) or 'нет'}\n"
         f"🪑 Скамья: {'есть' if s.has_bench else 'нет'}\n"
         f"🌳 Оборудование на улице: {', '.join(s.street_equipment) or 'нет'}\n"
-        f"⏭ При пропуске: {pref_text}\n\n"
+        f"⏭ При пропуске: {pref_text}\n"
+        f"🔔 Напоминание: {reminder_text}\n\n"
         "Что изменить?"
     )
-    await message.answer(text, reply_markup=settings_menu_kb())
+    await message.answer(text, reply_markup=settings_menu_kb(s.reminder_enabled))
     await state.set_state(SettingsStates.menu)
 
 
@@ -180,5 +199,61 @@ async def cb_save_skip_pref(callback: CallbackQuery, state: FSMContext) -> None:
         await session.commit()
     labels = {"shift": "Переносить", "skip": "Пропускать", "ask": "Спрашивать"}
     await callback.message.edit_text(f"Сохранено: {labels[pref]}.")
+    await state.clear()
+    await callback.answer()
+
+
+@router.callback_query(F.data == "settings:reminder", SettingsStates.menu)
+async def cb_edit_reminder(callback: CallbackQuery, state: FSMContext) -> None:
+    async with AsyncSessionLocal() as session:
+        s = await crud.get_user_settings(session, callback.from_user.id)
+    enabled = s.reminder_enabled
+    hour = s.reminder_hour
+    status = f"{hour:02d}:00" if enabled else "выключено"
+    await callback.message.edit_text(
+        f"🔔 Напоминание о тренировке\n\nТекущее: <b>{status}</b>\n\n"
+        "Выбери время (МСК) или выключи:",
+        reply_markup=reminder_kb(hour, enabled),
+        parse_mode="HTML",
+    )
+    await state.set_state(SettingsStates.edit_reminder)
+    await callback.answer()
+
+
+@router.callback_query(F.data == "reminder:toggle", SettingsStates.edit_reminder)
+async def cb_reminder_toggle(callback: CallbackQuery, state: FSMContext) -> None:
+    async with AsyncSessionLocal() as session:
+        s = await crud.get_user_settings(session, callback.from_user.id)
+        new_enabled = not s.reminder_enabled
+        await crud.upsert_user_settings(session, callback.from_user.id, reminder_enabled=new_enabled)
+        await session.commit()
+        hour = s.reminder_hour
+
+    status = f"{hour:02d}:00" if new_enabled else "выключено"
+    await callback.message.edit_text(
+        f"🔔 Напоминание о тренировке\n\nТекущее: <b>{status}</b>\n\n"
+        "Выбери время (МСК) или выключи:",
+        reply_markup=reminder_kb(hour, new_enabled),
+        parse_mode="HTML",
+    )
+    await callback.answer("Включено ✅" if new_enabled else "Выключено 🔕")
+
+
+@router.callback_query(F.data.startswith("reminder:hour:"), SettingsStates.edit_reminder)
+async def cb_reminder_hour(callback: CallbackQuery, state: FSMContext) -> None:
+    hour = int(callback.data.split(":")[2])
+    async with AsyncSessionLocal() as session:
+        await crud.upsert_user_settings(
+            session, callback.from_user.id,
+            reminder_enabled=True,
+            reminder_hour=hour,
+        )
+        await session.commit()
+
+    await callback.message.edit_text(
+        f"✅ Напоминание сохранено: <b>{hour:02d}:00 МСК</b>\n\n"
+        "В дни тренировок буду напоминать в это время.",
+        parse_mode="HTML",
+    )
     await state.clear()
     await callback.answer()
