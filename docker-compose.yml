@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: fitbot
+      POSTGRES_PASSWORD: fitbot
+      POSTGRES_DB: fitbot
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  bot:
+    build: .
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://fitbot:fitbot@db:5432/fitbot
+      ENVIRONMENT: development
+    restart: unless-stopped
+
+volumes:
+  pgdata:
