@@ -1,4 +1,6 @@
 {
+  "_comment": "plan_days: A=грудь/плечи/трицепс, B=спина/бицепс, C=руки+кор, legs=ноги (отключены)",
+
   "push_up": {
     "name": "Отжимания",
     "muscles": ["chest", "triceps", "shoulders"],
@@ -91,7 +93,7 @@
     "unit": "reps"
   },
   "pike_push_up": {
-    "name": "Отжимания в упоре (уголок)",
+    "name": "Отжимания в упоре (плечи)",
     "muscles": ["shoulders", "triceps"],
     "required_equipment": [],
     "plan_days": ["A"],
@@ -100,6 +102,7 @@
     "default_reps": 10,
     "unit": "reps"
   },
+
   "pullup": {
     "name": "Подтягивания прямым хватом",
     "muscles": ["back", "biceps"],
@@ -200,29 +203,10 @@
     "default_reps": 10,
     "unit": "reps"
   },
-  "squat": {
-    "name": "Приседания",
-    "muscles": ["quads", "glutes"],
-    "required_equipment": [],
-    "plan_days": ["C"],
-    "locations": ["home", "street"],
-    "default_sets": 3,
-    "default_reps": 15,
-    "unit": "reps"
-  },
-  "goblet_squat": {
-    "name": "Приседания с гирей (гоблет)",
-    "muscles": ["quads", "glutes", "core"],
-    "required_equipment": ["kettlebell"],
-    "plan_days": ["C"],
-    "locations": ["home"],
-    "default_sets": 3,
-    "default_reps": 12,
-    "unit": "reps"
-  },
-  "dumbbell_squat": {
-    "name": "Приседания с гантелями",
-    "muscles": ["quads", "glutes"],
+
+  "overhead_tricep_extension": {
+    "name": "Французский жим гантелей стоя",
+    "muscles": ["triceps"],
     "required_equipment": ["dumbbells"],
     "plan_days": ["C"],
     "locations": ["home"],
@@ -230,19 +214,19 @@
     "default_reps": 12,
     "unit": "reps"
   },
-  "lunge": {
-    "name": "Выпады",
-    "muscles": ["quads", "glutes", "hamstrings"],
-    "required_equipment": [],
+  "tricep_kickback": {
+    "name": "Разгибание руки с гантелью в наклоне",
+    "muscles": ["triceps"],
+    "required_equipment": ["dumbbells"],
     "plan_days": ["C"],
-    "locations": ["home", "street"],
+    "locations": ["home"],
     "default_sets": 3,
-    "default_reps": 10,
+    "default_reps": 12,
     "unit": "reps"
   },
-  "dumbbell_lunge": {
-    "name": "Выпады с гантелями",
-    "muscles": ["quads", "glutes", "hamstrings"],
+  "skull_crusher_floor": {
+    "name": "Жим узким хватом лёжа (скалолом)",
+    "muscles": ["triceps"],
     "required_equipment": ["dumbbells"],
     "plan_days": ["C"],
     "locations": ["home"],
@@ -250,64 +234,84 @@
     "default_reps": 10,
     "unit": "reps"
   },
-  "romanian_deadlift": {
-    "name": "Румынская тяга с гантелями",
-    "muscles": ["hamstrings", "glutes", "back"],
-    "required_equipment": ["dumbbells"],
-    "plan_days": ["C"],
-    "locations": ["home"],
-    "default_sets": 3,
-    "default_reps": 10,
-    "unit": "reps"
-  },
-  "kettlebell_swing": {
-    "name": "Махи гирей",
-    "muscles": ["glutes", "hamstrings", "back", "core"],
-    "required_equipment": ["kettlebell"],
+  "resistance_band_tricep_pushdown": {
+    "name": "Разгибание рук с резинкой (трицепс)",
+    "muscles": ["triceps"],
+    "required_equipment": ["resistance_bands"],
     "plan_days": ["C"],
     "locations": ["home"],
     "default_sets": 3,
     "default_reps": 15,
     "unit": "reps"
   },
-  "glute_bridge": {
-    "name": "Ягодичный мостик",
-    "muscles": ["glutes", "hamstrings"],
+  "tricep_dips_chair": {
+    "name": "Обратные отжимания от стула",
+    "muscles": ["triceps"],
     "required_equipment": [],
-    "plan_days": ["C"],
-    "locations": ["home", "street"],
-    "default_sets": 3,
-    "default_reps": 15,
-    "unit": "reps"
-  },
-  "single_leg_glute_bridge": {
-    "name": "Мостик на одной ноге",
-    "muscles": ["glutes", "hamstrings", "core"],
-    "required_equipment": [],
-    "plan_days": ["C"],
-    "locations": ["home", "street"],
-    "default_sets": 3,
-    "default_reps": 10,
-    "unit": "reps"
-  },
-  "calf_raise": {
-    "name": "Подъёмы на носки",
-    "muscles": ["calves"],
-    "required_equipment": [],
-    "plan_days": ["C"],
-    "locations": ["home", "street"],
-    "default_sets": 3,
-    "default_reps": 20,
-    "unit": "reps"
-  },
-  "hanging_knee_raise": {
-    "name": "Подъём коленей в висе",
-    "muscles": ["core", "hip_flexors"],
-    "required_equipment": ["pull_up_bar"],
     "plan_days": ["C"],
     "locations": ["home", "street"],
     "default_sets": 3,
     "default_reps": 12,
+    "unit": "reps"
+  },
+  "concentration_curl": {
+    "name": "Концентрированное сгибание (бицепс)",
+    "muscles": ["biceps"],
+    "required_equipment": ["dumbbells"],
+    "plan_days": ["C"],
+    "locations": ["home"],
+    "default_sets": 3,
+    "default_reps": 10,
+    "unit": "reps"
+  },
+  "reverse_curl": {
+    "name": "Сгибание обратным хватом (предплечья)",
+    "muscles": ["biceps", "forearms"],
+    "required_equipment": ["dumbbells"],
+    "plan_days": ["C"],
+    "locations": ["home"],
+    "default_sets": 3,
+    "default_reps": 12,
+    "unit": "reps"
+  },
+  "resistance_band_curl_C": {
+    "name": "Сгибание рук с резинкой (изоляция)",
+    "muscles": ["biceps"],
+    "required_equipment": ["resistance_bands"],
+    "plan_days": ["C"],
+    "locations": ["home"],
+    "default_sets": 3,
+    "default_reps": 15,
+    "unit": "reps"
+  },
+  "dumbbell_front_raise": {
+    "name": "Подъём гантелей перед собой (плечи)",
+    "muscles": ["shoulders"],
+    "required_equipment": ["dumbbells"],
+    "plan_days": ["C"],
+    "locations": ["home"],
+    "default_sets": 3,
+    "default_reps": 12,
+    "unit": "reps"
+  },
+  "dumbbell_upright_row": {
+    "name": "Тяга гантелей к подбородку",
+    "muscles": ["shoulders", "biceps"],
+    "required_equipment": ["dumbbells"],
+    "plan_days": ["C"],
+    "locations": ["home"],
+    "default_sets": 3,
+    "default_reps": 12,
+    "unit": "reps"
+  },
+  "resistance_band_face_pull": {
+    "name": "Тяга резинки к лицу (задняя дельта)",
+    "muscles": ["shoulders", "back"],
+    "required_equipment": ["resistance_bands"],
+    "plan_days": ["C"],
+    "locations": ["home"],
+    "default_sets": 3,
+    "default_reps": 15,
     "unit": "reps"
   },
   "plank": {
@@ -319,5 +323,166 @@
     "default_sets": 3,
     "default_reps": 45,
     "unit": "time"
+  },
+  "side_plank": {
+    "name": "Боковая планка",
+    "muscles": ["core", "obliques"],
+    "required_equipment": [],
+    "plan_days": ["C"],
+    "locations": ["home", "street"],
+    "default_sets": 2,
+    "default_reps": 30,
+    "unit": "time"
+  },
+  "crunch": {
+    "name": "Скручивания (пресс)",
+    "muscles": ["abs"],
+    "required_equipment": [],
+    "plan_days": ["C"],
+    "locations": ["home", "street"],
+    "default_sets": 3,
+    "default_reps": 20,
+    "unit": "reps"
+  },
+  "bicycle_crunch": {
+    "name": "Велосипед (пресс)",
+    "muscles": ["abs", "obliques"],
+    "required_equipment": [],
+    "plan_days": ["C"],
+    "locations": ["home", "street"],
+    "default_sets": 3,
+    "default_reps": 20,
+    "unit": "reps"
+  },
+  "russian_twist": {
+    "name": "Русские скручивания",
+    "muscles": ["abs", "obliques"],
+    "required_equipment": [],
+    "plan_days": ["C"],
+    "locations": ["home", "street"],
+    "default_sets": 3,
+    "default_reps": 20,
+    "unit": "reps"
+  },
+  "leg_raise_lying": {
+    "name": "Подъём ног лёжа (пресс)",
+    "muscles": ["abs", "core"],
+    "required_equipment": [],
+    "plan_days": ["C"],
+    "locations": ["home", "street"],
+    "default_sets": 3,
+    "default_reps": 15,
+    "unit": "reps"
+  },
+  "hanging_knee_raise": {
+    "name": "Подъём коленей в висе",
+    "muscles": ["core", "abs"],
+    "required_equipment": ["pull_up_bar"],
+    "plan_days": ["C"],
+    "locations": ["home", "street"],
+    "default_sets": 3,
+    "default_reps": 12,
+    "unit": "reps"
+  },
+  "mountain_climber": {
+    "name": "Скалолаз",
+    "muscles": ["core", "abs"],
+    "required_equipment": [],
+    "plan_days": ["C"],
+    "locations": ["home", "street"],
+    "default_sets": 3,
+    "default_reps": 30,
+    "unit": "reps"
+  },
+
+  "squat": {
+    "name": "Приседания",
+    "muscles": ["quads", "glutes"],
+    "required_equipment": [],
+    "plan_days": ["legs"],
+    "locations": ["home", "street"],
+    "default_sets": 3,
+    "default_reps": 15,
+    "unit": "reps"
+  },
+  "goblet_squat": {
+    "name": "Приседания с гирей (гоблет)",
+    "muscles": ["quads", "glutes", "core"],
+    "required_equipment": ["kettlebell"],
+    "plan_days": ["legs"],
+    "locations": ["home"],
+    "default_sets": 3,
+    "default_reps": 12,
+    "unit": "reps"
+  },
+  "dumbbell_squat": {
+    "name": "Приседания с гантелями",
+    "muscles": ["quads", "glutes"],
+    "required_equipment": ["dumbbells"],
+    "plan_days": ["legs"],
+    "locations": ["home"],
+    "default_sets": 3,
+    "default_reps": 12,
+    "unit": "reps"
+  },
+  "lunge": {
+    "name": "Выпады",
+    "muscles": ["quads", "glutes", "hamstrings"],
+    "required_equipment": [],
+    "plan_days": ["legs"],
+    "locations": ["home", "street"],
+    "default_sets": 3,
+    "default_reps": 10,
+    "unit": "reps"
+  },
+  "dumbbell_lunge": {
+    "name": "Выпады с гантелями",
+    "muscles": ["quads", "glutes", "hamstrings"],
+    "required_equipment": ["dumbbells"],
+    "plan_days": ["legs"],
+    "locations": ["home"],
+    "default_sets": 3,
+    "default_reps": 10,
+    "unit": "reps"
+  },
+  "romanian_deadlift": {
+    "name": "Румынская тяга с гантелями",
+    "muscles": ["hamstrings", "glutes", "back"],
+    "required_equipment": ["dumbbells"],
+    "plan_days": ["legs"],
+    "locations": ["home"],
+    "default_sets": 3,
+    "default_reps": 10,
+    "unit": "reps"
+  },
+  "kettlebell_swing": {
+    "name": "Махи гирей",
+    "muscles": ["glutes", "hamstrings", "back", "core"],
+    "required_equipment": ["kettlebell"],
+    "plan_days": ["legs"],
+    "locations": ["home"],
+    "default_sets": 3,
+    "default_reps": 15,
+    "unit": "reps"
+  },
+  "glute_bridge": {
+    "name": "Ягодичный мостик",
+    "muscles": ["glutes", "hamstrings"],
+    "required_equipment": [],
+    "plan_days": ["legs"],
+    "locations": ["home", "street"],
+    "default_sets": 3,
+    "default_reps": 15,
+    "unit": "reps"
+  },
+  "calf_raise": {
+    "name": "Подъёмы на носки",
+    "muscles": ["calves"],
+    "required_equipment": [],
+    "plan_days": ["legs"],
+    "locations": ["home", "street"],
+    "default_sets": 3,
+    "default_reps": 20,
+    "unit": "reps"
   }
 }
