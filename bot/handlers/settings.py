@@ -212,7 +212,7 @@ async def cb_edit_reminder(callback: CallbackQuery, state: FSMContext) -> None:
     status = f"{hour:02d}:00" if enabled else "выключено"
     await callback.message.edit_text(
         f"🔔 Напоминание о тренировке\n\nТекущее: <b>{status}</b>\n\n"
-        "Выбери время (МСК) или выключи:",
+        "Выбери время (Астана, UTC+5) или выключи:",
         reply_markup=reminder_kb(hour, enabled),
         parse_mode="HTML",
     )
@@ -232,7 +232,7 @@ async def cb_reminder_toggle(callback: CallbackQuery, state: FSMContext) -> None
     status = f"{hour:02d}:00" if new_enabled else "выключено"
     await callback.message.edit_text(
         f"🔔 Напоминание о тренировке\n\nТекущее: <b>{status}</b>\n\n"
-        "Выбери время (МСК) или выключи:",
+        "Выбери время (Астана, UTC+5) или выключи:",
         reply_markup=reminder_kb(hour, new_enabled),
         parse_mode="HTML",
     )
