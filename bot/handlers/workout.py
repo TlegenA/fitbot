@@ -7,6 +7,7 @@ from aiogram.types import Message, CallbackQuery
 
 from bot.db import crud
 from bot.db.session import AsyncSessionLocal
+from bot.db.models import Workout, UserSettings
 from bot.keyboards.workout import (
     location_kb, skip_action_kb, finish_workout_kb, apply_adjustments_kb,
 )
@@ -18,6 +19,54 @@ from bot.constants import CB_LOCATION, CB_SKIP_ACTION, CB_DONE_CONFIRM, SKIP_ASK
 router = Router()
 
 
+async def _rebuild_state(
+    workout: Workout,
+    s: UserSettings,
+    user_targets: dict,
+    state: FSMContext,
+    logged_sets: list,
+) -> tuple[list[dict], int, int]:
+    """
+    Reconstruct workout FSM state from logged sets in DB.
+    Returns (exercises, ex_index, set_num_to_do_next).
+    """
+    exercises = exercise_service.get_exercises_for_workout(
+        workout.plan_day,
+        workout.location,
+        s.home_equipment or [],
+        s.street_equipment or [],
+        s.has_bench,
+        user_targets,
+    )
+
+    # Count completed sets per exercise
+    sets_done: dict[str, int] = {}
+    for row in logged_sets:
+        sets_done[row.exercise_key] = sets_done.get(row.exercise_key, 0) + 1
+
+    # Find first exercise with incomplete sets
+    ex_index = len(exercises)  # default: all done
+    set_num = 1
+    for i, ex in enumerate(exercises):
+        done = sets_done.get(ex["key"], 0)
+        if done < ex["default_sets"]:
+            ex_index = i
+            set_num = done + 1
+            break
+
+    ex_key = exercises[ex_index]["key"] if ex_index < len(exercises) else None
+    await state.update_data(
+        workout_id=workout.id,
+        plan_day=workout.plan_day,
+        location=workout.location,
+        exercises=[e["key"] for e in exercises],
+        current_ex_index=ex_index,
+        current_set=set_num,
+        current_ex_key=ex_key,
+    )
+    return exercises, ex_index, set_num
+
+
 @router.message(Command("workout"))
 async def cmd_workout(message: Message, state: FSMContext) -> None:
     today = date.today()
@@ -26,13 +75,40 @@ async def cmd_workout(message: Message, state: FSMContext) -> None:
         if not s or not s.onboarding_done:
             await message.answer("Сначала пройди настройку — отправь /start.")
             return
+
         workout = await ensure_planned_workout(session, message.from_user.id, today)
+        user_targets = await crud.get_user_targets(session, message.from_user.id)
+
+        logged_sets = []
+        if workout:
+            logged_sets = await crud.get_workout_sets(session, workout.id)
+
         await session.commit()
 
     if not workout:
         await message.answer("Сегодня нет запланированной тренировки. 😴\nПосмотри /plan.")
         return
 
+    # Resume in-progress workout (has sets logged AND location chosen)
+    if logged_sets and workout.location:
+        exercises, ex_index, set_num = await _rebuild_state(
+            workout, s, user_targets, state, logged_sets
+        )
+        if ex_index >= len(exercises):
+            await message.answer(
+                "Все упражнения уже выполнены! Нажми кнопку, чтобы завершить.",
+                reply_markup=finish_workout_kb(workout.id),
+            )
+        else:
+            ex = exercises[ex_index]
+            await message.answer(
+                f"▶️ Продолжаю тренировку {workout.plan_day} с места остановки.\n"
+                f"Следующий: {ex['name']}, подход {set_num}/{ex['default_sets']}"
+            )
+            await _prompt_next_set(message, state, exercises, ex_index, set_num)
+        return
+
+    # Normal start: ask location
     await state.update_data(workout_id=workout.id, plan_day=workout.plan_day)
     await message.answer(
         f"Тренировка {workout.plan_day} — {today.strftime('%d.%m.%Y')} 💪\n\nГде тренируешься?",
@@ -126,9 +202,15 @@ async def _prompt_next_set(
     unit = ex.get("unit", "reps")
 
     if unit == "time":
-        prompt = f"⏱ {ex['name']}: подход {set_num}/{total_sets} — цель {ex['default_reps']} сек\nВведи фактическое время (сек):"
+        prompt = (
+            f"⏱ {ex['name']}: подход {set_num}/{total_sets} — цель {ex['default_reps']} сек\n"
+            "Введи фактическое время (сек):"
+        )
     else:
-        prompt = f"💪 {ex['name']}: подход {set_num}/{total_sets} — цель {ex['default_reps']} повт.\nВведи количество повторений:"
+        prompt = (
+            f"💪 {ex['name']}: подход {set_num}/{total_sets} — цель {ex['default_reps']} повт.\n"
+            "Введи количество повторений:"
+        )
 
     await state.update_data(current_ex_index=ex_index, current_set=set_num, current_ex_key=ex["key"])
     await message.answer(prompt)
@@ -138,6 +220,10 @@ async def _prompt_next_set(
 async def handle_set_result(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     if "workout_id" not in data or "current_ex_key" not in data:
+        await message.answer(
+            "Сессия прервалась (перезапуск бота). Отправь /workout — "
+            "продолжу с того места, где остановился. 🔄"
+        )
         return
 
     value = int(message.text)
@@ -223,7 +309,6 @@ async def cb_apply_targets(callback: CallbackQuery) -> None:
     async with AsyncSessionLocal() as session:
         sets = await crud.get_workout_sets(session, workout_id)
         user_targets = await crud.get_user_targets(session, callback.from_user.id)
-
         results = analyze_workout_performance(sets, user_targets)
 
         saved = 0
