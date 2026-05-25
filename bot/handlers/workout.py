@@ -294,16 +294,21 @@ async def cb_done_confirm(callback: CallbackQuery, state: FSMContext) -> None:
 
 @router.callback_query(F.data.startswith("apply_targets:"))
 async def cb_apply_targets(callback: CallbackQuery) -> None:
+    # Dismiss spinner immediately — do this first so user always gets feedback
+    await callback.answer()
+
     parts = callback.data.split(":")
     workout_id = int(parts[1])
     apply = parts[2] == "yes"
 
+    # Remove keyboard from analysis message regardless of choice
+    await callback.message.edit_reply_markup(reply_markup=None)
+
     if not apply:
-        await callback.message.edit_text(
-            callback.message.text + "\n\n<i>Цели оставлены без изменений.</i>",
-            parse_mode="HTML",
+        await callback.message.answer(
+            "Понял, цели оставлены без изменений.\n"
+            "До следующей тренировки! 👋"
         )
-        await callback.answer()
         return
 
     async with AsyncSessionLocal() as session:
@@ -312,9 +317,15 @@ async def cb_apply_targets(callback: CallbackQuery) -> None:
         results = analyze_workout_performance(sets, user_targets)
 
         saved = 0
+        changes: list[str] = []
         for r in results:
             if r["direction"] == "same":
                 continue
+            unit_label = "сек" if r["unit"] == "time" else "повт"
+            arrow = "📉" if r["direction"] == "down" else "📈"
+            changes.append(
+                f"{arrow} {r['name']}: {r['target']} → <b>{r['suggested']} {unit_label}</b>"
+            )
             if r["unit"] == "time":
                 await crud.upsert_exercise_target(
                     session, callback.from_user.id, r["exercise_key"],
@@ -329,14 +340,40 @@ async def cb_apply_targets(callback: CallbackQuery) -> None:
                 )
             saved += 1
 
+        # Find next workout date
+        next_workout = await _get_next_workout_info(session, callback.from_user.id)
         await session.commit()
 
-    await callback.message.edit_text(
-        callback.message.text + f"\n\n✅ <b>Сохранено {saved} корректировок.</b> "
-        "Новые цели будут применены со следующей тренировки.",
+    changes_text = "\n".join(changes) if changes else "—"
+    next_text = f"\n\n📅 Следующая тренировка: {next_workout}" if next_workout else ""
+
+    await callback.message.answer(
+        f"✅ <b>Цели обновлены!</b> Сохранено изменений: {saved}\n\n"
+        f"{changes_text}"
+        f"{next_text}\n\n"
+        "Продолжай в том же духе! 💪",
         parse_mode="HTML",
     )
-    await callback.answer()
+
+
+async def _get_next_workout_info(session, user_id: int) -> str | None:
+    """Return human-readable next workout date and plan_day, or None."""
+    from datetime import timedelta
+    from bot.constants import DAY_NAMES_FULL_RU
+
+    today = date.today()
+    schedule = await crud.get_schedule(session, user_id)
+    if not schedule:
+        return None
+
+    scheduled_dow = {e.day_of_week: e.plan_day for e in schedule}
+    for i in range(1, 8):
+        d = today + timedelta(days=i)
+        if d.weekday() in scheduled_dow:
+            plan = scheduled_dow[d.weekday()]
+            day_name = DAY_NAMES_FULL_RU[d.weekday()]
+            return f"{day_name}, {d.strftime('%d.%m')} — тренировка {plan}"
+    return None
 
 
 @router.message(Command("skip"))
