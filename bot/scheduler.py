@@ -7,7 +7,7 @@ from aiogram import Bot
 from sqlalchemy import select
 
 from bot.db.session import AsyncSessionLocal
-from bot.db.models import User, UserSettings
+from bot.db.models import User, UserSettings, Workout
 from bot.db import crud
 from bot.services.claude_service import get_weekly_analysis
 from bot.constants import (
@@ -45,8 +45,14 @@ async def send_workout_reminders(bot: Bot, current_hour: int) -> None:
                     continue
 
                 # Don't remind if workout already done or skipped today
-                workout = await crud.get_today_workout(session, user.id, today)
-                if workout and workout.status in ("done", "skipped"):
+                result = await session.execute(
+                    select(Workout).where(
+                        Workout.user_id == user.id,
+                        Workout.scheduled_date == today,
+                        Workout.status.in_(("done", "skipped")),
+                    )
+                )
+                if result.scalar_one_or_none():
                     continue
 
             day_name = DAY_NAMES_FULL_RU[dow]
