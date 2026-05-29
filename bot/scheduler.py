@@ -18,9 +18,8 @@ from bot.constants import (
 logger = logging.getLogger(__name__)
 
 
-async def send_workout_reminders(bot: Bot, current_hour: int) -> None:
+async def send_workout_reminders(bot: Bot, current_hour: int, today: date) -> None:
     """Send training-day reminders to users whose reminder_hour matches current_hour."""
-    today = date.today()
     dow = today.weekday()
 
     async with AsyncSessionLocal() as session:
@@ -127,11 +126,11 @@ async def send_weekly_analysis(bot: Bot) -> None:
 
 
 async def _reminder_dispatcher(bot: Bot) -> None:
-    """Called every hour — passes the current Moscow hour to the reminder sender."""
+    """Called every hour — passes the current Astana hour and date to the reminder sender."""
     from datetime import datetime
     import zoneinfo
-    moscow_hour = datetime.now(tz=zoneinfo.ZoneInfo("Asia/Almaty")).hour
-    await send_workout_reminders(bot, moscow_hour)
+    now_almaty = datetime.now(tz=zoneinfo.ZoneInfo("Asia/Almaty"))
+    await send_workout_reminders(bot, now_almaty.hour, now_almaty.date())
 
 
 def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
@@ -153,6 +152,7 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
         trigger="cron",
         minute=0,
         kwargs={"bot": bot},
+        misfire_grace_time=3600,  # fire even if bot restarted up to 1h late
     )
 
     return scheduler
