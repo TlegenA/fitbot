@@ -94,6 +94,23 @@ async def create_workout(session: AsyncSession, **kwargs) -> Workout:
     return w
 
 
+async def get_unfinished_previous_workout(
+    session: AsyncSession, user_id: int, today: date
+) -> Optional[Workout]:
+    """Return the most recent workout started but not finished before today."""
+    result = await session.execute(
+        select(Workout)
+        .where(
+            Workout.user_id == user_id,
+            Workout.scheduled_date < today,
+            Workout.status == "planned",
+            Workout.location.isnot(None),
+        )
+        .order_by(Workout.scheduled_date.desc())
+    )
+    return result.scalars().first()
+
+
 async def get_today_workout(
     session: AsyncSession, user_id: int, today: date
 ) -> Optional[Workout]:

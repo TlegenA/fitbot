@@ -10,7 +10,7 @@ from bot.db.session import AsyncSessionLocal
 from bot.db.models import Workout, UserSettings
 from bot.keyboards.workout import (
     location_kb, skip_action_kb, finish_workout_kb, apply_adjustments_kb,
-    street_equipment_today_kb,
+    street_equipment_today_kb, finish_early_kb, unfinished_workout_kb,
 )
 from bot.services import exercise_service
 from bot.services.workout_service import ensure_planned_workout, handle_skip
@@ -75,6 +75,19 @@ async def cmd_workout(message: Message, state: FSMContext) -> None:
         s = await crud.get_user_settings(session, message.from_user.id)
         if not s or not s.onboarding_done:
             await message.answer("Сначала пройди настройку — отправь /start.")
+            return
+
+        # Check for an unfinished workout from a previous day
+        unfinished = await crud.get_unfinished_previous_workout(session, message.from_user.id, today)
+        if unfinished:
+            from bot.constants import DAY_NAMES_FULL_RU
+            day_name = DAY_NAMES_FULL_RU[unfinished.scheduled_date.weekday()]
+            date_str = unfinished.scheduled_date.strftime('%d.%m')
+            await message.answer(
+                f"⚠️ У тебя есть незавершённая тренировка {day_name} ({date_str}).\n\n"
+                "Что делаем?",
+                reply_markup=unfinished_workout_kb(unfinished.id),
+            )
             return
 
         workout = await ensure_planned_workout(session, message.from_user.id, today)
@@ -266,7 +279,96 @@ async def _prompt_next_set(
         )
 
     await state.update_data(current_ex_index=ex_index, current_set=set_num, current_ex_key=ex["key"])
-    await message.answer(prompt)
+    workout_id = data["workout_id"]
+    await message.answer(prompt, reply_markup=finish_early_kb(workout_id))
+
+
+async def _close_workout_as_done(
+    callback: CallbackQuery,
+    state: FSMContext,
+    workout_id: int,
+) -> None:
+    async with AsyncSessionLocal() as session:
+        await crud.update_workout_status(
+            session, workout_id, STATUS_DONE,
+            actual_date=date.today(),
+            finished_at=datetime.now(),
+        )
+        sets = await crud.get_workout_sets(session, workout_id)
+        user_targets = await crud.get_user_targets(session, callback.from_user.id)
+        await session.commit()
+
+    await state.clear()
+    await callback.message.edit_text("Тренировка завершена! Отличная работа 💪")
+
+    if not sets:
+        return
+
+    results = analyze_workout_performance(sets, user_targets)
+    has_changes = any(r["direction"] != "same" for r in results)
+    analysis_text = format_analysis_message(results)
+
+    if has_changes:
+        await callback.message.answer(
+            analysis_text,
+            reply_markup=apply_adjustments_kb(workout_id),
+            parse_mode="HTML",
+        )
+    else:
+        await callback.message.answer(analysis_text, parse_mode="HTML")
+
+
+@router.callback_query(F.data.startswith("finish_early:"))
+async def cb_finish_early(callback: CallbackQuery, state: FSMContext) -> None:
+    workout_id = int(callback.data.split(":")[1])
+    await callback.answer()
+    await _close_workout_as_done(callback, state, workout_id)
+
+
+@router.callback_query(F.data.startswith("unfinished:"))
+async def cb_unfinished_action(callback: CallbackQuery, state: FSMContext) -> None:
+    parts = callback.data.split(":")
+    workout_id = int(parts[1])
+    action = parts[2]
+
+    if action == "done":
+        await callback.answer()
+        await _close_workout_as_done(callback, state, workout_id)
+        await callback.message.answer("Теперь отправь /workout для сегодняшней тренировки.")
+        return
+
+    if action == "skip":
+        await callback.answer()
+        async with AsyncSessionLocal() as session:
+            await crud.update_workout_status(session, workout_id, "skipped")
+            await session.commit()
+        await callback.message.edit_text("Тренировка пропущена.")
+        await callback.message.answer("Теперь отправь /workout для сегодняшней тренировки.")
+        return
+
+    # action == "resume"
+    await callback.answer()
+    async with AsyncSessionLocal() as session:
+        workout = await crud.get_workout_by_id(session, workout_id)
+        s = await crud.get_user_settings(session, callback.from_user.id)
+        user_targets = await crud.get_user_targets(session, callback.from_user.id)
+        logged_sets = await crud.get_workout_sets(session, workout_id)
+
+    exercises, ex_index, set_num = await _rebuild_state(
+        workout, s, user_targets, state, logged_sets
+    )
+    if ex_index >= len(exercises):
+        await callback.message.edit_text(
+            "Все упражнения уже выполнены! Нажми кнопку, чтобы завершить.",
+            reply_markup=finish_workout_kb(workout_id),
+        )
+    else:
+        ex = exercises[ex_index]
+        await callback.message.edit_text(
+            f"▶️ Продолжаю тренировку {workout.plan_day}.\n"
+            f"Следующий: {ex['name']}, подход {set_num}/{ex['default_sets']}"
+        )
+        await _prompt_next_set(callback.message, state, exercises, ex_index, set_num)
 
 
 @router.message(F.text.regexp(r"^\d+$"))
@@ -313,36 +415,8 @@ async def handle_set_result(message: Message, state: FSMContext) -> None:
 @router.callback_query(F.data.startswith(CB_DONE_CONFIRM + ":"))
 async def cb_done_confirm(callback: CallbackQuery, state: FSMContext) -> None:
     workout_id = int(callback.data.split(":")[1])
-
-    async with AsyncSessionLocal() as session:
-        await crud.update_workout_status(
-            session, workout_id, STATUS_DONE,
-            actual_date=date.today(),
-            finished_at=datetime.now(),
-        )
-        sets = await crud.get_workout_sets(session, workout_id)
-        user_targets = await crud.get_user_targets(session, callback.from_user.id)
-        await session.commit()
-
-    await state.clear()
-    await callback.message.edit_text("Тренировка завершена! Отличная работа 💪")
     await callback.answer()
-
-    if not sets:
-        return
-
-    results = analyze_workout_performance(sets, user_targets)
-    has_changes = any(r["direction"] != "same" for r in results)
-    analysis_text = format_analysis_message(results)
-
-    if has_changes:
-        await callback.message.answer(
-            analysis_text,
-            reply_markup=apply_adjustments_kb(workout_id),
-            parse_mode="HTML",
-        )
-    else:
-        await callback.message.answer(analysis_text, parse_mode="HTML")
+    await _close_workout_as_done(callback, state, workout_id)
 
 
 @router.callback_query(F.data.startswith("apply_targets:"))

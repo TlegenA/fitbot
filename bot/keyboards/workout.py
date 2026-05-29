@@ -52,6 +52,22 @@ def street_equipment_today_kb(selected: list[str]) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def finish_early_kb(workout_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="🏁 Завершить как есть", callback_data=f"finish_early:{workout_id}")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def unfinished_workout_kb(workout_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="▶️ Продолжить", callback_data=f"unfinished:{workout_id}:resume")
+    builder.button(text="✅ Засчитать выполненной", callback_data=f"unfinished:{workout_id}:done")
+    builder.button(text="🗑 Пропустить", callback_data=f"unfinished:{workout_id}:skip")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
 def finish_workout_kb(workout_id: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="🏁 Завершить тренировку", callback_data=f"{CB_DONE_CONFIRM}:{workout_id}")
