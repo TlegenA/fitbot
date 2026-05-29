@@ -84,7 +84,7 @@
     "name": "Отжимания на брусьях",
     "muscles": ["triceps", "chest", "shoulders"],
     "required_equipment": ["parallel_bars"],
-    "plan_days": ["A"],
+    "plan_days": ["A", "C"],
     "locations": ["street"],
     "default_sets": 3,
     "default_reps": 10,
@@ -111,10 +111,10 @@
     "unit": "reps"
   },
   "chinup": {
-    "name": "Подтягивания обратным хватом",
+    "name": "Подтягивания обратным хватом (бицепс)",
     "muscles": ["biceps", "back"],
     "required_equipment": ["pull_up_bar"],
-    "plan_days": ["B"],
+    "plan_days": ["B", "C"],
     "locations": ["home", "street"],
     "default_sets": 3,
     "default_reps": 8,
@@ -243,6 +243,16 @@
   "tricep_dips_chair": {
     "name": "Обратные отжимания от стула",
     "muscles": ["triceps"],
+    "required_equipment": [],
+    "plan_days": ["C"],
+    "locations": ["home"],
+    "default_sets": 3,
+    "default_reps": 12,
+    "unit": "reps"
+  },
+  "close_grip_push_up": {
+    "name": "Отжимания узким хватом (трицепс)",
+    "muscles": ["triceps", "chest"],
     "required_equipment": [],
     "plan_days": ["C"],
     "locations": ["home", "street"],
