@@ -379,29 +379,39 @@ async def _get_next_workout_info(session, user_id: int) -> str | None:
 @router.message(Command("skip"))
 async def cmd_skip(message: Message, state: FSMContext) -> None:
     today = date.today()
-    async with AsyncSessionLocal() as session:
-        s = await crud.get_user_settings(session, message.from_user.id)
-        if not s or not s.onboarding_done:
-            await message.answer("Сначала пройди настройку — /start.")
-            return
+    try:
+        async with AsyncSessionLocal() as session:
+            s = await crud.get_user_settings(session, message.from_user.id)
+            if not s or not s.onboarding_done:
+                await message.answer("Сначала пройди настройку — /start.")
+                return
 
-        workout = await crud.get_today_workout(session, message.from_user.id, today)
-        if not workout:
-            await message.answer("Сегодня нет запланированной тренировки.")
-            return
+            # Create record if today is a workout day but /workout hasn't been called yet
+            workout = await ensure_planned_workout(session, message.from_user.id, today)
+            if not workout:
+                await message.answer("Сегодня нет запланированной тренировки. 😴")
+                return
 
-        if s.skip_behavior == SKIP_ASK:
-            await state.update_data(workout_id=workout.id)
-            await message.answer(
-                "Как поступить с сегодняшней тренировкой?",
-                reply_markup=skip_action_kb(),
-            )
-            return
+            if workout.status in ("done", "skipped"):
+                await message.answer("Сегодняшняя тренировка уже завершена или пропущена.")
+                return
 
-        result = await handle_skip(session, workout, s.skip_behavior, today)
-        await session.commit()
+            if s.skip_behavior == SKIP_ASK:
+                await state.update_data(workout_id=workout.id)
+                await message.answer(
+                    "Как поступить с сегодняшней тренировкой?",
+                    reply_markup=skip_action_kb(),
+                )
+                return
 
-    await message.answer(result)
+            result = await handle_skip(session, workout, s.skip_behavior, today)
+            await session.commit()
+
+        await message.answer(result)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"cmd_skip error: {e}", exc_info=True)
+        await message.answer("Произошла ошибка. Попробуй ещё раз.")
 
 
 @router.callback_query(F.data.startswith(CB_SKIP_ACTION + ":"))

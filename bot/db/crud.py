@@ -102,7 +102,7 @@ async def get_today_workout(
             and_(
                 Workout.user_id == user_id,
                 Workout.scheduled_date == today,
-                Workout.status == "planned",
+                Workout.status.in_(["planned", "shifted"]),
             )
         )
     )
