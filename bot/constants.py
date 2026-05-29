@@ -44,6 +44,8 @@ STREET_EQUIPMENT_OPTIONS = [
     ("pull_up_bar", "Турник"),
     ("parallel_bars", "Брусья"),
     ("rings", "Кольца"),
+    ("outdoor_chest_press", "Жим от груди (тренажёр)"),
+    ("outdoor_lat_pulldown", "Тяга сверху (тренажёр)"),
 ]
 
 # Day names in Russian

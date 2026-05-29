@@ -80,6 +80,26 @@
     "default_reps": 12,
     "unit": "reps"
   },
+  "outdoor_chest_press": {
+    "name": "Жим от груди на уличном тренажёре",
+    "muscles": ["chest", "shoulders", "triceps"],
+    "required_equipment": ["outdoor_chest_press"],
+    "plan_days": ["A"],
+    "locations": ["street"],
+    "default_sets": 3,
+    "default_reps": 12,
+    "unit": "reps"
+  },
+  "outdoor_lat_pulldown": {
+    "name": "Тяга сверху на уличном тренажёре",
+    "muscles": ["back", "lats", "biceps"],
+    "required_equipment": ["outdoor_lat_pulldown"],
+    "plan_days": ["B"],
+    "locations": ["street"],
+    "default_sets": 3,
+    "default_reps": 12,
+    "unit": "reps"
+  },
   "dips": {
     "name": "Отжимания на брусьях",
     "muscles": ["triceps", "chest", "shoulders"],
