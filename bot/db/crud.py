@@ -143,6 +143,22 @@ async def update_workout_status(
     )
 
 
+async def get_pending_shifted_workout(
+    session: AsyncSession, user_id: int, after: date
+) -> Optional[Workout]:
+    """Return the first future shifted workout, or None."""
+    result = await session.execute(
+        select(Workout)
+        .where(
+            Workout.user_id == user_id,
+            Workout.scheduled_date > after,
+            Workout.status == "shifted",
+        )
+        .order_by(Workout.scheduled_date)
+    )
+    return result.scalars().first()
+
+
 async def find_next_free_day(
     session: AsyncSession, user_id: int, after: date
 ) -> date:

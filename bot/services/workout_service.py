@@ -71,6 +71,17 @@ async def handle_skip(
 ) -> str:
     """Process skip: shift or skip. Returns a status message."""
     if behavior == SKIP_SHIFT:
+        # If there's already a pending shifted workout, just skip without creating another
+        pending = await crud.get_pending_shifted_workout(session, workout.user_id, today)
+        if pending:
+            await crud.update_workout_status(session, workout.id, STATUS_SKIPPED)
+            d = pending.scheduled_date
+            return (
+                f"Тренировка пропущена.\n"
+                f"Уже есть перенесённая на {d.strftime('%d.%m')} "
+                f"({DAY_NAMES_RU[d.weekday()]}) — не дублируем."
+            )
+
         await crud.update_workout_status(session, workout.id, STATUS_SKIPPED)
         next_day = await crud.find_next_free_day(session, workout.user_id, today)
         await crud.create_workout(
@@ -86,7 +97,7 @@ async def handle_skip(
         )
     else:  # skip
         await crud.update_workout_status(session, workout.id, STATUS_SKIPPED)
-        return "Тренировка пропущена. Серия сбросилась. До следующей! 💪"
+        return "Тренировка пропущена. До следующей! 💪"
 
 
 def workout_streak(workouts: list[Workout]) -> int:
