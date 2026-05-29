@@ -104,9 +104,9 @@ async def get_today_workout(
                 Workout.scheduled_date == today,
                 Workout.status.in_(["planned", "shifted"]),
             )
-        )
+        ).order_by(Workout.id)
     )
-    return result.scalar_one_or_none()
+    return result.scalars().first()
 
 
 async def get_workout_by_id(
