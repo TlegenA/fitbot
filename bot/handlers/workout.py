@@ -10,6 +10,7 @@ from bot.db.session import AsyncSessionLocal
 from bot.db.models import Workout, UserSettings
 from bot.keyboards.workout import (
     location_kb, skip_action_kb, finish_workout_kb, apply_adjustments_kb,
+    street_equipment_today_kb,
 )
 from bot.services import exercise_service
 from bot.services.workout_service import ensure_planned_workout, handle_skip
@@ -136,9 +137,63 @@ async def cb_location(callback: CallbackQuery, state: FSMContext) -> None:
             started_at=datetime.now(),
         )
         await session.commit()
-        home_eq = s.home_equipment or []
-        street_eq = s.street_equipment or []
-        has_bench = s.has_bench
+
+    await state.update_data(location=location, _user_targets=None)
+
+    if location == "street":
+        pre_selected = list(s.street_equipment or [])
+        await state.update_data(street_equipment_today=pre_selected)
+        await callback.message.edit_text(
+            "🌳 Что доступно сегодня на улице?\n"
+            "Сними галочку если чего-то нет сейчас.",
+            reply_markup=street_equipment_today_kb(pre_selected),
+        )
+        await callback.answer()
+        return
+
+    await _begin_workout(callback, state, s, user_targets, location, plan_day)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("street_eq_today:"))
+async def cb_street_equipment_today(callback: CallbackQuery, state: FSMContext) -> None:
+    value = callback.data.split(":")[1]
+    data = await state.get_data()
+    selected = list(data.get("street_equipment_today", []))
+
+    if value != "done":
+        if value in selected:
+            selected.remove(value)
+        else:
+            selected.append(value)
+        await state.update_data(street_equipment_today=selected)
+        await callback.message.edit_reply_markup(
+            reply_markup=street_equipment_today_kb(selected)
+        )
+        await callback.answer()
+        return
+
+    await callback.answer()
+    plan_day = data.get("plan_day")
+    async with AsyncSessionLocal() as session:
+        s = await crud.get_user_settings(session, callback.from_user.id)
+        user_targets = await crud.get_user_targets(session, callback.from_user.id)
+
+    await _begin_workout(callback, state, s, user_targets, "street", plan_day, street_eq_override=selected)
+
+
+async def _begin_workout(
+    callback: CallbackQuery,
+    state: FSMContext,
+    s,
+    user_targets: dict,
+    location: str,
+    plan_day: str,
+    street_eq_override: list | None = None,
+) -> None:
+    home_eq = s.home_equipment or []
+    street_eq = street_eq_override if street_eq_override is not None else (s.street_equipment or [])
+    has_bench = s.has_bench
 
     exercises = exercise_service.get_exercises_for_workout(
         plan_day, location, home_eq, street_eq, has_bench, user_targets
@@ -149,7 +204,6 @@ async def cb_location(callback: CallbackQuery, state: FSMContext) -> None:
             "Нет подходящих упражнений для этой локации и оборудования. "
             "Проверь настройки /settings."
         )
-        await callback.answer()
         return
 
     await state.update_data(
@@ -174,7 +228,6 @@ async def cb_location(callback: CallbackQuery, state: FSMContext) -> None:
 
     await callback.message.edit_text("\n".join(lines))
     await _prompt_next_set(callback.message, state, exercises, 0, 1)
-    await callback.answer()
 
 
 async def _prompt_next_set(

@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from bot.constants import CB_LOCATION, CB_SKIP_ACTION, CB_DONE_CONFIRM, CB_CONFIRM
+from bot.constants import CB_LOCATION, CB_SKIP_ACTION, CB_DONE_CONFIRM, CB_CONFIRM, STREET_EQUIPMENT_OPTIONS
 
 
 def location_kb() -> InlineKeyboardMarkup:
@@ -39,6 +39,16 @@ def apply_adjustments_kb(workout_id: int) -> InlineKeyboardMarkup:
     builder.button(text="✅ Применить", callback_data=f"apply_targets:{workout_id}:yes")
     builder.button(text="⏭ Пропустить", callback_data=f"apply_targets:{workout_id}:no")
     builder.adjust(2)
+    return builder.as_markup()
+
+
+def street_equipment_today_kb(selected: list[str]) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for key, label in STREET_EQUIPMENT_OPTIONS:
+        mark = "✅ " if key in selected else "☐ "
+        builder.button(text=f"{mark}{label}", callback_data=f"street_eq_today:{key}")
+    builder.button(text="▶️ Начать тренировку", callback_data="street_eq_today:done")
+    builder.adjust(1)
     return builder.as_markup()
 
 
