@@ -24,19 +24,23 @@ async def on_startup(bot: Bot) -> None:
     from bot.db.session import engine
     from bot.db.models import Base
 
-    async with engine.begin() as conn:
-        # Create new tables (no-op for existing ones)
-        await conn.run_sync(Base.metadata.create_all)
-
-        # Safe column migrations — ADD COLUMN IF NOT EXISTS is idempotent
-        column_migrations = [
-            "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS reminder_enabled BOOLEAN NOT NULL DEFAULT TRUE",
-            "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS reminder_hour INTEGER NOT NULL DEFAULT 9",
-        ]
-        for sql in column_migrations:
-            await conn.execute(text(sql))
-
-    logger.info("Database schema up to date.")
+    for attempt in range(1, 6):
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+                column_migrations = [
+                    "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS reminder_enabled BOOLEAN NOT NULL DEFAULT TRUE",
+                    "ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS reminder_hour INTEGER NOT NULL DEFAULT 9",
+                ]
+                for sql in column_migrations:
+                    await conn.execute(text(sql))
+            logger.info("Database schema up to date.")
+            return
+        except Exception as e:
+            logger.warning(f"DB connection attempt {attempt}/5 failed: {e}")
+            if attempt < 5:
+                await asyncio.sleep(attempt * 2)
+    raise RuntimeError("Failed to connect to database after 5 attempts")
 
 
 async def on_shutdown(bot: Bot, scheduler) -> None:
