@@ -365,7 +365,7 @@
     "muscles": ["abs"],
     "required_equipment": [],
     "plan_days": ["C"],
-    "locations": ["home", "street"],
+    "locations": ["home"],
     "default_sets": 3,
     "default_reps": 20,
     "unit": "reps"
@@ -375,7 +375,7 @@
     "muscles": ["abs", "obliques"],
     "required_equipment": [],
     "plan_days": ["C"],
-    "locations": ["home", "street"],
+    "locations": ["home"],
     "default_sets": 3,
     "default_reps": 20,
     "unit": "reps"
@@ -385,7 +385,7 @@
     "muscles": ["abs", "obliques"],
     "required_equipment": [],
     "plan_days": ["C"],
-    "locations": ["home", "street"],
+    "locations": ["home"],
     "default_sets": 3,
     "default_reps": 20,
     "unit": "reps"
@@ -395,7 +395,7 @@
     "muscles": ["abs", "core"],
     "required_equipment": [],
     "plan_days": ["C"],
-    "locations": ["home", "street"],
+    "locations": ["home"],
     "default_sets": 3,
     "default_reps": 15,
     "unit": "reps"
@@ -410,12 +410,42 @@
     "default_reps": 12,
     "unit": "reps"
   },
+  "hanging_leg_raise": {
+    "name": "Подъём прямых ног в висе",
+    "muscles": ["abs", "core"],
+    "required_equipment": ["pull_up_bar"],
+    "plan_days": ["C"],
+    "locations": ["street"],
+    "default_sets": 3,
+    "default_reps": 10,
+    "unit": "reps"
+  },
+  "standing_knee_raise": {
+    "name": "Подъём колена стоя (пресс)",
+    "muscles": ["abs", "core", "hip_flexors"],
+    "required_equipment": [],
+    "plan_days": ["C"],
+    "locations": ["street"],
+    "default_sets": 3,
+    "default_reps": 15,
+    "unit": "reps"
+  },
+  "standing_oblique_crunch": {
+    "name": "Боковые скручивания стоя",
+    "muscles": ["obliques", "core"],
+    "required_equipment": [],
+    "plan_days": ["C"],
+    "locations": ["street"],
+    "default_sets": 3,
+    "default_reps": 20,
+    "unit": "reps"
+  },
   "mountain_climber": {
     "name": "Скалолаз",
     "muscles": ["core", "abs"],
     "required_equipment": [],
     "plan_days": ["C"],
-    "locations": ["home", "street"],
+    "locations": ["home"],
     "default_sets": 3,
     "default_reps": 30,
     "unit": "reps"
